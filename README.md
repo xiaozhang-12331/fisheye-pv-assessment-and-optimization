@@ -60,6 +60,17 @@ Notes:
 - `binary_ckpt_path` is the auxiliary binary building-segmentation checkpoint.
 - The segmentation module runs offline by default and never downloads models from the network.
 
+Model weight files are not stored in the repository (the binary checkpoint
+exceeds the 100 MB Git limit). Download them from the
+[Releases page](https://github.com/xiaozhang-12331/fisheye-pv-assessment-and-optimization/releases)
+and place them according to the paths above:
+
+- `best_segformer_b4_binary.pt` — auxiliary binary building-segmentation
+  checkpoint, attached to release v1.0.0.
+- `nvidia_segformer_b4_ade/` — the standard Hugging Face layout of
+  `nvidia/segformer-b4-finetuned-ade-512-512`; any local copy of that
+  pretrained model can be used directly.
+
 ### 3.3 TMY minute-level meteorological data
 
 Configured in `config.py -> PathConfig.tmy_minute_csv`:
