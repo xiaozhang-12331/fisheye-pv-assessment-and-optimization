@@ -1,0 +1,19 @@
+# Byte-compiled / cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime outputs (not part of the source release)
+results/
+radiation_out/
+
+# Model weights are distributed via GitHub Release, not the repo
+*.pt
+*.pth
+*.onnx
+
+# Environments and editor files
+.venv/
+venv/
+.idea/
+.vscode/
