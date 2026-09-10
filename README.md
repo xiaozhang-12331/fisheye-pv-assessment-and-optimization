@@ -1,6 +1,6 @@
 # PV Sky-View Analysis System (Refactored Pipeline Documentation)
 
-This document describes the code structure, inputs and outputs, parameter locations, computation principles, optimization algorithm, and interactive 3-D visualization of `D:\projects\image_recog\新架构`.
+This document describes the code structure, inputs and outputs, parameter locations, computation principles, optimization algorithm, and interactive 3-D visualization of the refactored pipeline in this repository.
 
 ## 1. Overall Functionality
 
@@ -61,14 +61,20 @@ Notes:
 - The segmentation module runs offline by default and never downloads models from the network.
 
 Model weight files are not stored in the repository (the binary checkpoint
+  
 exceeds the 100 MB Git limit). Download them from the
-[Releases page](https://github.com/xiaozhang-12331/fisheye-pv-assessment-and-optimization/releases)
+  
+[Releases page](../../releases)
+  
 and place them according to the paths above:
 
 - `best_segformer_b4_binary.pt` — auxiliary binary building-segmentation
+    
   checkpoint, attached to release v1.0.0.
 - `nvidia_segformer_b4_ade/` — the standard Hugging Face layout of
+    
   `nvidia/segformer-b4-finetuned-ade-512-512`; any local copy of that
+    
   pretrained model can be used directly.
 
 ### 3.3 TMY minute-level meteorological data
@@ -82,8 +88,11 @@ tmy_minute_csv = Path(r"D:\projects\image_recog\radiation_out\TMY_Baoding_minute
 Required columns: `date`, `time`, `GHI`, `DNI`, `DHI`.
 
 A copy of the Baoding TMY file used in the paper is bundled in this repository at
+  
 `data/TMY_Baoding_minute.csv`. Point `tmy_minute_csv` to this file (or copy it to
+  
 the location shown above) to reproduce the published results with the exact
+  
 input data.
 
 Notes:
@@ -141,8 +150,11 @@ Main files:
 - `4_soft4.npz`: four-channel soft probability map.
 
 If `config.py -> SegmentationConfig.keep_other_class=False` (the default), the output uses three-class semantics:
+  
 `sky / vegetation / building`. The `other` class is merged into `building` at the probability level;
+  
 `4_mask_oth.png` is then removed (any stale copy is deleted);
+  
 `4_soft4.npz` keeps the four-channel format, but the other channel is merged into the building channel and zeroed.
 
 ### 4.2 Solar trajectory and occlusion outputs
@@ -189,20 +201,15 @@ Two main tables are written:
 1. `annual_daily_power.csv`
 
    Contents:
-
    - date
    - daily_energy_kwh
-
    Notes:
-
    - Uses the TMY minute-level data.
    - Uses the annual occlusion CSV.
    - Uses the optimal fixed tilt/azimuth found by the optimization.
-
 2. `date_minute_power.csv`
 
    Contents:
-
    - time
    - solar altitude angle
    - solar azimuth angle
@@ -212,9 +219,7 @@ Two main tables are written:
    - total POA irradiance
    - power
    - per-step energy
-
    Notes:
-
    - The date comes from `config.py -> RunConfig.single_date`.
    - TMY and occlusion data are matched by month-day; years need not agree.
 
@@ -326,7 +331,6 @@ Location: `config.py -> SunpathConfig`
 - `projection_model`: fisheye projection model, default `equisolid`.
 - `min_altitude_deg`: trajectory points below this solar elevation are not treated as valid visible positions.
 - `max_jump_px`: breakage threshold for trajectory segments.
-
 - `save_csv`: whether to save the occlusion CSV.
 - `save_image`: whether to save the trajectory image.
 
@@ -483,166 +487,3 @@ Why P10:
 - The target application is standalone PV devices whose daily load must be covered by same-day generation.
 - Maximizing only the annual total may favor summer or a few high-yield days.
 - P10 emphasizes the weaker days of the year and is better suited to daily minimum-reliability requirements.
-
-## 7. Interactive 3-D Sky Dome
-
-File:
-
-```text
-results/<image_name>/pv_best_panel/visuals/interactive_sky_dome.html
-```
-
-Implementation:
-
-- Uses Three.js.
-- Builds a 3-D hemisphere mesh.
-- Maps the fisheye image as a texture onto the inner hemisphere surface.
-- Places a 3-D PV panel model at the center.
-- Rotates the panel according to the optimal tilt and azimuth.
-- Uses OrbitControls for dragging, zooming, and panning.
-
-Coordinate conventions:
-
-- X: east.
-- Y: north.
-- Z: zenith.
-- Azimuth: 0=north, 90=east, 180=south, 270=west.
-- The panel azimuth follows the `pvlib.surface_azimuth` convention: the horizontal projection direction of the panel normal, i.e. the direction the panel faces; 190° means 10° west of south, not north.
-- In the interactive view a yellow arrow indicates the panel normal/facing direction, for verifying the optimal azimuth.
-
-Caveats:
-
-- This does not reconstruct real 3-D building depth from a single image.
-- The fisheye image is only used as a sky-dome texture.
-- The actual occlusion determination still comes from the original fisheye segmentation and the solar trajectory analysis.
-
-## 8. Usage
-
-### 8.1 Standard single-day run
-
-Run:
-
-```powershell
-python D:\projects\image_recog\新架构\pipeline.py
-```
-
-This executes in sequence:
-
-1. Semantic segmentation.
-2. Single-day solar trajectory occlusion.
-3. Single-day radiation computation.
-4. Annual optimization, if `optimization.enabled=True`.
-
-### 8.2 Enabling annual optimization
-
-Set at the top of `config.py`:
-
-```python
-CENTRAL_OVERRIDES = {
-    "optimization.enabled": True,
-    "optimization.occlusion_csv": r"D:\path\to\your_fullyear_sunpath.csv",
-}
-```
-
-### 8.3 Choosing the date for the per-minute power output
-
-Modify:
-
-```python
-CENTRAL_OVERRIDES = {
-    "run.single_date": "2026-05-08",
-}
-```
-
-Output file:
-
-```text
-results/<image_name>/pv_best_panel/date_minute_power.csv
-```
-
-## 9. FAQ
-
-### 9.1 Why is there no optimization result?
-
-Check:
-
-```python
-optimization.enabled
-```
-
-It must be `True`.
-
-If no annual occlusion CSV matches the current measurement point, the program automatically generates the annual occlusion series from the current fisheye segmentation result.
-
-### 9.2 Why does the HTML fail to open or show a blank page?
-
-The HTML loads Three.js from a CDN.
-
-If the machine is offline, the browser may fail to load Three.js.
-
-Solutions:
-
-- Open it with network access.
-- Or switch to local `vendor/three.module.js` and `OrbitControls.js`.
-
-### 9.3 Why is the 3-D sky dome not a real 3-D building model?
-
-A single fisheye image carries no depth information and cannot reliably reconstruct real building geometry.
-
-The current 3-D view maps the fisheye image onto the sky hemisphere to display the obstruction environment and the best panel pose.
-
-The actual occlusion is still decided by the pixel-level occlusion determination of the original algorithm.
-
-### 9.4 Why can TMY and occlusion data with different years be merged?
-
-TMY is a typical meteorological year; its year label is only representative.
-
-Optimization matches by month-day-hour-minute:
-
-```text
-01-01 00:00
-01-01 00:01
-...
-```
-
-This allows any annual solar occlusion series to be combined with the TMY radiation data.
-
-## 10. Interpreting the Outputs
-
-### 10.1 `annual_daily_power.csv`
-
-Shows how much energy is generated on each day of the year.
-
-Low-yield dates usually result from:
-
-- Low TMY irradiance on that day.
-- Low solar elevation.
-- Severe obstruction at the current measurement point.
-- Residual obstruction that even the optimal orientation cannot avoid.
-
-### 10.2 `date_minute_power.csv`
-
-Shows the minute-by-minute generation process of a single day.
-
-Key columns:
-
-- `occlusion_type`: which region the sun falls in during that minute.
-- `poa_total_w_m2`: irradiance received by the optimal panel pose in that minute.
-- `power_w`: instantaneous power after module conversion.
-- `energy_kwh_per_step`: energy contributed in that minute.
-
-### 10.3 `interactive_sky_dome.html`
-
-Shows intuitively:
-
-- Where the fisheye obstruction environment sits on the 3-D sky dome.
-- The optimal PV panel tilt and facing direction.
-- The angular relation between the panel and the dome.
-
-## 11. Important Limitations
-
-- The current model does not apply module temperature corrections.
-- The current model ignores soiling, degradation, and inverter efficiency curves.
-- The current model does not reconstruct real 3-D near-field obstructions.
-- PV panel parameters only scale the yield; if area, efficiency, and PR are constants, they usually do not change the optimal angles.
-- The optimal orientation is entirely determined by the fisheye occlusion determination of the current measurement point and the TMY data.
